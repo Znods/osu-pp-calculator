@@ -2,9 +2,9 @@
 
 This is an osu-pp-calculator bot that will display a beatmaps performance points in twitch chat.
 
-Replace token with your token in apiv2.c
-Replace oauth key with your key in main.c
-Also change botname to your twitch botname :)
+- Replace token with your token in apiv2.c
+- Replace oauth key with your key in main.c
+- Also change botname to your twitch botname :)
 
 # Dependencies
 - apt install libjson-c-dev -y
