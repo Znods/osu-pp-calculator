@@ -11,7 +11,10 @@ This is an osu-pp-calculator bot that will display a beatmaps performance points
 - apt install libjson-c-dev -y
 
 # Compile
-- gcc *.c -o pp -ljson-c -lm -trigraphs -DDEBUG
+- gcc *.c -o pp -ljson-c -lm -trigraphs -Wall
+
+DEBUG Mode:
+- gcc *.c -o pp -ljson-c -lm -trigraphs -Wall -DDEBUG
 
 # Example Usage
 
