@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <netdb.h>
 
@@ -15,7 +16,9 @@
 #include "headers/computepp.h"
 #include "headers/parse.h"
 
-float calcTotal(struct beatmap_data *, struct beatmap *);
+#define OWNER ":znods:" /* For "!s" command to close bot gracefully */
+
+float calcTotal(struct beatmap_data *, struct beatmap *, int);
 
 /* Creates socket for twitch bot */
 int twitch_socket(){
@@ -85,7 +88,9 @@ void twitch_login(int fd, char *channel, char *botname, char *oauth){
         exit(1);
     }
 
-    puts(response);
+    #ifdef DEBUG
+        write(1, response, strlen(response));
+    #endif
 }
 /* Periodically check pulse */
 void ping_check(int fd, char *twitch_chat){
@@ -97,37 +102,65 @@ void ping_check(int fd, char *twitch_chat){
     }
 }
 /* Command check function */
-void commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data){
+bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data){
     char user[50] = {'\0'};
     char command[5] = {'\0'};
     char mod[10] = {'\0'};
     int beatmap = 0;
     int mods = 0;
 
+    /* Parse Twitch Chat Command */
     sscanf(chat, "%s %s %d %s", user, command, &beatmap, mod);
 
     if(!strncmp("!pp", command, 3)){
         if(!strncmp(mod, "+dt", 4)){
             mods = MODS_DT;
+        } else if(!strncmp(mod, "+hr", 3)){
+            mods = MODS_HR;
+        } else if(!strncmp(mod, "+hd", 3)){
+            mods = MODS_HD;
+        } else if(!strncmp(mod, "+fl", 3)){
+            mods = MODS_FL;
+        } else if(!strncmp(mod, "+ez", 3)){
+            mods = MODS_EZ;
         } else if(!strncmp(mod, "+dthr", 6) || !strncmp(mod, "+hrdt", 6)){
             mods = MODS_DT | MODS_HR;
         } else if(!strncmp(mod, "+dthd", 6) || !strncmp(mod, "+hddt", 6)){
             mods = MODS_DT | MODS_HD;
-        } else if(!strncmp(mod, "+dthrhd", 8) || !strncmp(mod, "+hrdthd", 8) || !strncmp(mod, "+hddthr", 8) || !strncmp(mod, "+hrhddt", 8)){
+        } else if(!strncmp(mod, "+hrhd", 6) || !strncmp(mod, "+hdhr", 6)){
+            mods = MODS_HR | MODS_HD;
+        } else if(!strncmp(mod, "+fldt", 6) || !strncmp(mod, "+dtfl", 6)){
+            mods = MODS_DT | MODS_FL;
+        } else if(!strncmp(mod, "+flhr", 6) || !strncmp(mod, "+hrfl", 6)){
+            mods = MODS_HR | MODS_FL;
+        } else if(!strncmp(mod, "+flhd", 6) || !strncmp(mod, "+hdfl", 6)){
+            mods = MODS_HD | MODS_FL;
+        } else if(!strncmp(mod, "+dthrhd", 8) || !strncmp(mod, "+dthdhr", 8) || !strncmp(mod, "+hddthr", 8) || !strncmp(mod, "+hrdthd", 8) || !strncmp(mod, "+hrhddt", 8) || !strncmp(mod, "+hdhrdt", 8)){
             mods = MODS_DT | MODS_HR | MODS_HD;
+        } else if(!strncmp(mod, "+dthrfl", 8) || !strncmp(mod, "+dtflhr", 8) || !strncmp(mod, "+fldthr", 8) || !strncmp(mod, "+hrdtfl", 8) || !strncmp(mod, "+hrfldt", 8) || !strncmp(mod, "+flhrdt", 8)){
+            mods = MODS_DT | MODS_HR | MODS_FL;
+        } else if(!strncmp(mod, "+hrhdfl", 8) || !strncmp(mod, "+hrflhd", 8) || !strncmp(mod, "+flhrhd", 8) || !strncmp(mod, "+hdhrfl", 8) || !strncmp(mod, "+hdflhr", 8) || !strncmp(mod, "+flhdhr", 8)){
+            mods = MODS_HD | MODS_HR | MODS_FL;
+        } else if(!strncmp(mod, "+dthdfl", 8) || !strncmp(mod, "+dtflhd", 8) || !strncmp(mod, "+fldthd", 8) || !strncmp(mod, "+hddtfl", 8) || !strncmp(mod, "+hdfldt", 8) || !strncmp(mod, "+flhddt", 8)){
+            mods = MODS_HD | MODS_DT | MODS_FL;
         } else {
             mods = MODS_NOMOD;
         }
 
          /* Get information about beatmap from osu apiv2 */
         int ret = osu_apiv2(attributes, beatmap, mods);
-        if(ret < 0){
+        if(ret == -1){
             char err[255];
-            printf("\033[0;35mosu api failed!?\033[0m\n");
+            #ifdef DEBUG
+                printf("\033[0;35mosu api failed!?\033[0m\n");
+            #endif
             memset(err, '\0', 255);
             sprintf(err, "PRIVMSG #%s :Failed to retrieve beatmap!\r\n", channel);
             send(fd, err, strlen(err), 0);
-            return;
+            return true;
+        } else if(ret == 2){
+            fprintf(stderr, "\n\nERR: in function osu_apiv2() | <%s>\n\n", __FILE__);
+            return false;
         }
 
         #ifdef DEBUG
@@ -136,7 +169,7 @@ void commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
         #endif
 
         /* Calc beatmaps PP with current osu performance point formula */
-        float pp = calcTotal(data, attributes);
+        float pp = calcTotal(data, attributes, mods);
 
         #ifdef DEBUG
             printf("PP:\033[1;31m %.2f\033[0m\n\n", pp);
@@ -148,4 +181,12 @@ void commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
         sprintf(response, "PRIVMSG #%s :PP->%.2f\r\n", channel, pp);
         send(fd, response, strlen(response), 0);
     }
+
+    if(!strncmp("!s", command, 3) && !strncmp(OWNER, user, strlen(OWNER))){
+        #ifdef DEBUG
+            printf("\nKilling bot...\n");
+        #endif
+        return false;
+    }
+    return true;
 }

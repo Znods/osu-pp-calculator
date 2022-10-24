@@ -24,16 +24,15 @@ float flashlightValue;
 float effectiveMissCount;
 float totalValue;
 
-enum mods {DT, HR, HD, RELAX, RELAX2, AUTOPLAY, NOFAIL, FL, NM};
 enum scoreVersion {SV1, SV2};
 
 float accuracy(struct beatmap_data *);
 int total_hits(struct beatmap_data *);
 int total_successful_hits(struct beatmap_data *);
 void compute_effective_misscount(struct beatmap_data *);
-void computeAimValue(struct beatmap_data *);
-void computeSpeedValue(struct beatmap_data *);
-void computeAccuracyValue(struct beatmap_data *);
-void computeFlashLight(struct beatmap_data *);
+void computeAimValue(struct beatmap_data *, int);
+void computeSpeedValue(struct beatmap_data *, int);
+void computeAccuracyValue(struct beatmap_data *, int);
+void computeFlashLight(struct beatmap_data *, int);
 float getComboScalingFactor(struct beatmap_data *);
-float computeTotalValue();
+float computeTotalValue(int);

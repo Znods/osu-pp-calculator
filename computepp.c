@@ -6,6 +6,7 @@
 
 #include "headers/computepp.h"
 #include "headers/tools.h"
+#include "headers/apiv2.h"
 
 float accuracy(struct beatmap_data *data){
     if(total_hits(data) != 0){
@@ -35,26 +36,22 @@ void compute_effective_misscount(struct beatmap_data *data){
     effectiveMissCount = max((float)data->numMiss, comboBaseMissCount);
 }
 
-float computeTotalValue(){
-    enum mods mod;
-    mod = NM;
+float computeTotalValue(int mods){
     // Don't count scores made with supposedly unranked mods
-    if(mod == RELAX || mod == RELAX2 || mod == AUTOPLAY){
+    if(mods == MODS_RX || mods == MODS_AP){
         return 0.0f;
     }
 
     float multiplier = 1.14f;
 
-    if(mod == NOFAIL)
+    if(mods == MODS_NF)
         multiplier *= max(0.9f, 1.0f - 0.02f * effectiveMissCount);
 
     totalValue = pow(pow(aimValue, 1.1f) + pow(speedValue, 1.1f) + pow(accuracyValue, 1.1f) + pow(flashlightValue, 1.1), 1.0f / 1.1f) * multiplier;
     return totalValue;
 }
 
-void computeAimValue(struct beatmap_data *data){
-    enum mods mod;
-    mod = NM;
+void computeAimValue(struct beatmap_data *data, int mods){
     aimValue = pow(5.0f * max(1.0f, data->aim / 0.0675f) - 4.0f, 3.0f) / 100000.0f;
 
     int numTotalHits = total_hits(data);
@@ -79,7 +76,7 @@ void computeAimValue(struct beatmap_data *data){
     aimValue *= 1.0f + approachRateFactor * lengthBonus;
 
     // We want to give more reward for lower AR when it comes to aim and HD. This nerfs high AR and buffs lower AR.
-    if(mod == HD)
+    if(mods == MODS_HD || mods == (MODS_DT | MODS_HD) || mods == (MODS_HR | MODS_HD) || mods == (MODS_FL | MODS_HD) || mods == (MODS_DT | MODS_HR | MODS_HD) || mods == (MODS_DT | MODS_FL | MODS_HD) || mods == (MODS_FL | MODS_HR | MODS_HD))
         aimValue *= 1.0f + 0.04f * (12.0f - approachRate);
 
     // We assume 15% of sliders in a map are difficult since there's no way to tell from the performance calculator.
@@ -98,9 +95,7 @@ void computeAimValue(struct beatmap_data *data){
 	aimValue *= 0.98f + (pow(data->od, 2) / 2500);
 }
 
-void computeSpeedValue(struct beatmap_data *data){
-    enum mods mod;
-    mod = NM;
+void computeSpeedValue(struct beatmap_data *data, int mods){
     speedValue = pow(5.0f * max(1.0f, data->speed / 0.0675f) - 4.0f, 3.0f) / 100000.0f;
 
 	int numTotalHits = total_hits(data);
@@ -122,7 +117,7 @@ void computeSpeedValue(struct beatmap_data *data){
 	speedValue *= 1.0f + approachRateFactor * lengthBonus; // Buff for longer maps with high AR.
 
 	// We want to give more reward for lower AR when it comes to speed and HD. This nerfs high AR and buffs lower AR.
-	if (mod == HD)
+	if(mods == MODS_HD || mods == (MODS_DT | MODS_HD) || mods == (MODS_HR | MODS_HD) || mods == (MODS_FL | MODS_HD) || mods == (MODS_DT | MODS_HR | MODS_HD) || mods == (MODS_DT | MODS_FL | MODS_HD) || mods == (MODS_FL | MODS_HR | MODS_HD))
 		speedValue *= 1.0f + 0.04f * (12.0f - approachRate);
 
 	// Calculate accuracy assuming the worst case scenario
@@ -139,10 +134,8 @@ void computeSpeedValue(struct beatmap_data *data){
 	speedValue *= pow(0.99f, data->num50 < numTotalHits / 500.0f ? 0.0f : data->num50 - numTotalHits / 500.0f);
 }
 
-void computeAccuracyValue(struct beatmap_data *data){
+void computeAccuracyValue(struct beatmap_data *data, int mods){
     enum scoreVersion scorev;
-    enum mods mod;
-    mod = NM;
     scorev = SV1;
     // This percentage only considers HitCircles of any value - in this part of the calculation we focus on hitting the timing hit window.
 	float betterAccuracyPercentage;
@@ -178,19 +171,17 @@ void computeAccuracyValue(struct beatmap_data *data){
 	// Bonus for many hitcircles - it's harder to keep good accuracy up for longer.
 	accuracyValue *= min(1.15f, (float)(pow(numHitObjectsWithAccuracy / 1000.0f, 0.3f)));
 
-	if (mod == HD)
+	if(mods == MODS_HD || mods == (MODS_DT | MODS_HD) || mods == (MODS_HR | MODS_HD) || mods == (MODS_FL | MODS_HD) || mods == (MODS_DT | MODS_HR | MODS_HD) || mods == (MODS_DT | MODS_FL | MODS_HD) || mods == (MODS_FL | MODS_HR | MODS_HD))
 		accuracyValue *= 1.08f;
 
-	if (mod == FL)
+	if (mods == MODS_FL || mods == (MODS_FL | MODS_HD) || mods == (MODS_FL | MODS_DT) || mods == (MODS_FL | MODS_HR) || mods == (MODS_FL | MODS_HD | MODS_DT) || mods == (MODS_FL | MODS_HD | MODS_HR) || mods == (MODS_FL | MODS_HR | MODS_DT))
 		accuracyValue *= 1.02f;
 }
 
-void computeFlashLight(struct beatmap_data *data){
-    enum mods mod;
-    mod = NM;
+void computeFlashLight(struct beatmap_data *data, int mods){
     flashlightValue = 0.0f;
 
-	if (mod != FL)
+	if (mods != MODS_FL || mods != (MODS_FL | MODS_HD) || mods != (MODS_FL | MODS_DT) || mods != (MODS_FL | MODS_HR) || mods != (MODS_FL | MODS_HD | MODS_DT) || mods != (MODS_FL | MODS_HD | MODS_HR) || mods != (MODS_FL | MODS_HR | MODS_DT))
 		return;
 
 	flashlightValue = pow(data->flashlight, 2.0f) * 25.0f;

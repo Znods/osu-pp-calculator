@@ -1,6 +1,4 @@
-#ifdef DEBUG
-    #include <stdio.h>
-#endif
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -23,9 +21,12 @@ const char *token = "";
 /* 
 To get token:
 
+Replace client id and client secret in curl request
+
+Find client id and client secret from your osu settings page
+
 curl -X POST "https://osu.ppy.sh/oauth/token" -H "Accept: application/json" -H "Content-Type: application/json" -d '{"client_id":yourid,"client_secret":"your secret key","grant_type":"client_credentials","scope":"public"}' 
 
-Find client id and client secret from osu settings page
 */
 
 volatile int retrys = 0;
@@ -46,7 +47,7 @@ int osu_apiv2(struct beatmap *attributes, int beatmap_id, int mods){
 
     if((host = gethostbyname("osu.ppy.sh")) < 0){
         fprintf(stderr, "gethostbyname: %s\n", strerror(errno));
-        return -1;
+        return 2;
     }
 
     memmove(&serv.sin_addr.s_addr, host->h_addr_list[0], sizeof(host->h_length));
@@ -54,12 +55,13 @@ int osu_apiv2(struct beatmap *attributes, int beatmap_id, int mods){
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if(fd < 0){
         fprintf(stderr, "socket: %s\n", strerror(errno));
-        return -1;
+        return 2;
     }
 
     if(connect(fd, (struct sockaddr *)&serv, (socklen_t)sizeof(serv)) < 0){
         fprintf(stderr, "connect: %s\n", strerror(errno));
-        exit(1);
+        close(fd);
+        return 2;
     }
 
     /* Grab beatmap attributes */
@@ -69,12 +71,14 @@ int osu_apiv2(struct beatmap *attributes, int beatmap_id, int mods){
     /* Send request 1 to osu.ppy.sh */
     if(send(fd, request1, strlen(request1), 0) < 0){
         perror("send()");
-        return -1;
+        close(fd);
+        return 2;
     }
 
     if(recv(fd, buffer, 5000, 0) < 0){
         perror("recv()");
-        return -1;
+        close(fd);
+        return 2;
     }
 
     /* Parse response from request 1 */
@@ -100,8 +104,11 @@ int osu_apiv2(struct beatmap *attributes, int beatmap_id, int mods){
     char request2[2000], buffer2[10000], additional_beatmap_info[10000];
     /* 
     Jump to "retry" IF the osu api doesn't return a circle count
-    MAX retrys is set to 10 
+    MAX retrys is set to 5
     */
+    #ifdef DEBUG
+        puts("");
+    #endif
 retry: memset(request2, '\0', 2000); 
        memset(buffer2, '\0', 10000);
        memset(additional_beatmap_info, '\0', 10000);
@@ -111,12 +118,14 @@ retry: memset(request2, '\0', 2000);
     /* Send request 2 to osu.ppy.sh */
     if(send(fd, request2, strlen(request2), 0) < 0){
         perror("send()");
-        return -1;
+        close(fd);
+        return 2;
     }
 
     if(recv(fd, buffer2, 10000, 0) < 0){
         perror("recv");
-        return -1;
+        close(fd);
+        return 2;
     }
 
     /* Parse response from request 2 */
@@ -138,10 +147,15 @@ retry: memset(request2, '\0', 2000);
         sleep(1);
         retrys++;
         #ifdef DEBUG
-            printf("Retrys: %d\n", retrys);
+            char retryz[25];
+            memset(retryz, '\0', 25);
+            sprintf(retryz, "\rRetrys:\033[1;33m %d\033[0m  ", retrys);
+            write(1, retryz, strlen(retryz));
+            fflush(stdout);
         #endif
-        if(retrys > 10){
-            return -1;
+        if(retrys > 5){
+            close(fd);
+            return -1; // Failed to get beatmap attributes
         }
         goto retry;
     }
