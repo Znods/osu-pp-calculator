@@ -12,7 +12,7 @@ This is an osu-pp-calculator bot that will display a beatmaps performance points
 # Compile
 - gcc *.c -o pp -ljson-c -lm -trigraphs -DDEBUG
 
-# Example Useage
+# Example Usage
 
 Start bot:
 - ./pp
