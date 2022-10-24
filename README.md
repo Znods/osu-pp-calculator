@@ -26,5 +26,6 @@ Command Syntax:
 - !pp beatmap_id +dt
 - !pp beatmap_id +dthr
 - !pp beatmap_id +dthd
+- !pp beatmap_id +dthrhd
 
 https://user-images.githubusercontent.com/70346380/197395867-25361e75-e467-4a9f-9c62-fc502f8d2494.mp4
