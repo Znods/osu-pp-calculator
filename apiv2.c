@@ -12,7 +12,7 @@
 #include <netinet/in.h>
 
 #include "headers/parse.h"
-#include "headers/apiv2.h"
+#include "headers/computepp.h"
 
 /* This is a TEST APIv2 Client for osu.ppy.sh */
 
@@ -30,6 +30,8 @@ curl -X POST "https://osu.ppy.sh/oauth/token" -H "Accept: application/json" -H "
 */
 
 volatile int retrys = 0;
+
+float calcTotal(struct beatmap_data *, struct beatmap *, int);
 
 int osu_apiv2(struct beatmap *attributes, int beatmap_id, int mods){
     struct sockaddr_in serv = {0};

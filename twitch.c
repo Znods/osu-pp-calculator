@@ -12,7 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "headers/apiv2.h"
+#include "headers/mods.h"
 #include "headers/computepp.h"
 #include "headers/parse.h"
 
@@ -103,25 +103,23 @@ void ping_check(int fd, char *twitch_chat){
 }
 /* Command check function */
 bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data){
-    char user[50] = {'\0'};
-    char command[5] = {'\0'};
-    char mod[10] = {'\0'};
-    int beatmap = 0;
-    int mods = 0;
+    char user[50] = {'\0'}, command[5] = {'\0'}, mod[10] = {'\0'};
+    int beatmap = 0, mods = 0;
 
     /* Parse Twitch Chat Command */
     sscanf(chat, "%s %s %d %s", user, command, &beatmap, mod);
 
-    if(!strncmp("!pp", command, 3)){
+    /* !pp command */
+    if(!strncmp("!pp", command, 4)){
         if(!strncmp(mod, "+dt", 4)){
             mods = MODS_DT;
-        } else if(!strncmp(mod, "+hr", 3)){
+        } else if(!strncmp(mod, "+hr", 4)){
             mods = MODS_HR;
-        } else if(!strncmp(mod, "+hd", 3)){
+        } else if(!strncmp(mod, "+hd", 4)){
             mods = MODS_HD;
-        } else if(!strncmp(mod, "+fl", 3)){
+        } else if(!strncmp(mod, "+fl", 4)){
             mods = MODS_FL;
-        } else if(!strncmp(mod, "+ez", 3)){
+        } else if(!strncmp(mod, "+ez", 4)){
             mods = MODS_EZ;
         } else if(!strncmp(mod, "+dthr", 6) || !strncmp(mod, "+hrdt", 6)){
             mods = MODS_DT | MODS_HR;
@@ -150,11 +148,10 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
          /* Get information about beatmap from osu apiv2 */
         int ret = osu_apiv2(attributes, beatmap, mods);
         if(ret == -1){
-            char err[255];
+            char err[70] = {0};
             #ifdef DEBUG
                 printf("\033[0;35mosu api failed!?\033[0m\n");
             #endif
-            memset(err, '\0', 255);
             sprintf(err, "PRIVMSG #%s :Failed to retrieve beatmap!\r\n", channel);
             send(fd, err, strlen(err), 0);
             return true;
@@ -165,7 +162,7 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
 
         #ifdef DEBUG
             printf("\nStar Rating: \033[1;33m%.2f\033[0m\nMax Combo: \033[1;32m%d\033[0m\nAim: \033[1;36m%.2f\033[0m\nSpeed: \033[1;31m%.2f\033[0m\nSpeed Note Count: \033[0m%.2f\nFlashlight: \033[1;34m%.2f\033[0m\nSlider Factor: %.2f\nAR: \033[0;35m%.2f\033[0m\nOD: \033[1;35m%.2f\033[0m\n\n", attributes->stars, attributes->maxcombo, attributes->aim, attributes->speed, attributes->speednotecount, attributes->flashlight, attributes->sliderfactor, attributes->ar, attributes->od);
-            printf("Count Circles: %d\nCount Sliders: %d\nCount Spinners %d\n\n", attributes->countcircle, attributes->countsliders, attributes->countspinners);
+            printf("Count Circles: %d | Count Sliders: %d | Count Spinners %d\n\n", attributes->countcircle, attributes->countsliders, attributes->countspinners);
         #endif
 
         /* Calc beatmaps PP with current osu performance point formula */
@@ -176,8 +173,7 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
         #endif
 
         /* Write to twitch chat here */
-        char response[255];
-        memset(response, '\0', 255);
+        char response[50] = {0};
         sprintf(response, "PRIVMSG #%s :PP->%.2f\r\n", channel, pp);
         send(fd, response, strlen(response), 0);
     }

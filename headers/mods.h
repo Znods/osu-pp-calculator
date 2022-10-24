@@ -1,5 +1,4 @@
 #pragma once
-#include <stdbool.h>
 
 #define MODS_NOMOD 0
 #define MODS_NF (1<<0)

@@ -6,7 +6,8 @@
 
 #include "headers/computepp.h"
 #include "headers/tools.h"
-#include "headers/apiv2.h"
+#include "headers/mods.h"
+#include "headers/parse.h"
 
 float accuracy(struct beatmap_data *data){
     if(total_hits(data) != 0){
@@ -208,4 +209,32 @@ float getComboScalingFactor(struct beatmap_data *data){
 	if (mCombo > 0)
 		return min((float)pow(data->maxcombo, 0.8f) / pow(data->maxcombo, 0.8f), 1.0f);
 	return 1.0f;
+}
+
+float calcTotal(struct beatmap_data *data, struct beatmap *attributes, int mods){
+    // only calculating 100% scores for NOW
+    data->num300 = attributes->countcircle + attributes->countsliders + attributes->countspinners;
+    data->num100 = 0;
+    data->num50 = 0;
+    data->numMiss = 0;
+
+    data->maxcombo = attributes->maxcombo;
+    data->numsliders = attributes->countsliders;
+    data->aim = attributes->aim;
+    data->sliderfactor = attributes->sliderfactor;
+    data->ar = attributes->ar;
+    data->od = attributes->od;
+    data->speed = attributes->speed;
+    data->speednotecount = attributes->speednotecount;
+    data->flashlight = attributes->flashlight;
+
+    data->totalhitcircles = attributes->countcircle + attributes->countsliders + attributes->countspinners;
+
+    compute_effective_misscount(data);
+    computeAimValue(data, mods);
+    computeSpeedValue(data, mods);
+    computeAccuracyValue(data, mods);
+    computeFlashLight(data, mods);
+
+    return computeTotalValue(mods);
 }
