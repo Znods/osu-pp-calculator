@@ -27,7 +27,7 @@ to do:
 
 #define CHANNEL "znods"
 #define BOTNAME "znodss"
-#define OAUTH_KEY ""
+#define OAUTH_KEY "your oauth key"
 /*
 Get key from here:
 https://chatterino.com/client_login
