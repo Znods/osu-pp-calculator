@@ -21,7 +21,7 @@ DEBUG Mode:
 Start bot:
 - ./pp
 
-Commands:
+Command Syntax:
 - !pp beatmap_id
 - !pp beatmap_id +dt
 - !pp beatmap_id +dthr
