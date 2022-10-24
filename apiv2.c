@@ -16,7 +16,7 @@
 
 /* This is a TEST APIv2 Client for osu.ppy.sh */
 
-const char *token = "";
+const char *token = "your token here";
 
 /* 
 To get token:
