@@ -47,5 +47,6 @@ struct beatmap{
 
 void parse_attributes(char *, struct beatmap *);
 void parse_additional_info(char *, struct beatmap *);
-int osu_apiv2(struct beatmap *, int, int);
 void parse_chat(char *, char *);
+int osu_apiv2(struct beatmap *, int, int, char *);
+int get_token(char *);

@@ -102,7 +102,7 @@ void ping_check(int fd, char *twitch_chat){
     }
 }
 /* Command check function */
-bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data){
+bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data, char *osutoken){
     char user[50] = {'\0'}, command[5] = {'\0'}, mod[10] = {'\0'};
     int beatmap = 0, mods = 0;
 
@@ -146,7 +146,7 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
         }
 
          /* Get information about beatmap from osu apiv2 */
-        int ret = osu_apiv2(attributes, beatmap, mods);
+        int ret = osu_apiv2(attributes, beatmap, mods, osutoken);
         if(ret == -1){
             char err[70] = {0};
             #ifdef DEBUG

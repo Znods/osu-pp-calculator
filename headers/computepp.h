@@ -26,6 +26,9 @@ float totalValue;
 
 enum scoreVersion {SV1, SV2};
 
+const int client_id;
+const char *client_secret;
+
 float accuracy(struct beatmap_data *);
 int total_hits(struct beatmap_data *);
 int total_successful_hits(struct beatmap_data *);
