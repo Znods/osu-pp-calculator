@@ -59,6 +59,11 @@ int main(){
     int ret = get_token(osutoken);
     if(ret < 0){
         printf("\n\n\033[1;31mFailed grabbing osu api token!\nCheck client_id & client_secret in apiv2.c!\033[0m\n\n\n");
+        free(attributes);
+        free(data);
+        free(buffer);
+        free(osutoken);
+        close(fd);
         return EXIT_FAILURE;
     }
     #ifdef DEBUG
