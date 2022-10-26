@@ -48,7 +48,7 @@ int twitch_socket(){
     return fd;
 }
 /* Send oauth information to twitch irc */
-void twitch_login(int fd, char *channel, char *botname, char *oauth){
+int twitch_login(int fd, char *channel, char *botname, char *oauth){
     /* Wait */
     char pass[strlen(oauth)];
     char buffer[strlen(botname)];
@@ -58,39 +58,40 @@ void twitch_login(int fd, char *channel, char *botname, char *oauth){
     usleep(7500);
     sprintf(pass, "PASS oauth:%s\r\n", oauth);
     if(write(fd, pass, strlen(pass)) < 0){
-        perror("write()");
-        exit(1);
+        perror("write() oauth:");
+        return 2;
     }
 
     usleep(7500);
     sprintf(buffer, "NICK %s\r\n", botname);
     if(write(fd, buffer, strlen(buffer)) < 0){
-        perror("write()");
-        exit(1);
+        perror("write() nick:");
+        return 2;
     }
 
     usleep(7500);
     sprintf(chan, "JOIN #%s\r\n", channel);
     if(write(fd, chan, strlen(chan)) < 0){
-        perror("write()");
-        exit(1);
+        perror("write() join:");
+        return 2;
     }
 
     /* check for invalid information */
     memset(response, '\0', 255);
     if(recv(fd, response, 255, SOCK_NONBLOCK) < 0){
-        perror("read()");
-        exit(1);
+        perror("read() respone:");
+        return 2;
     }
 
     if(!strncmp(response, ":tmi.twitch.tv NOTICE * :Login authentication failed", 52)){
         printf("Login authentication failed.\n\n");
-        exit(1);
+        return -1;
     }
 
     #ifdef DEBUG
         write(1, response, strlen(response));
     #endif
+    return 0;
 }
 /* Periodically check pulse */
 void ping_check(int fd, char *twitch_chat){
@@ -99,6 +100,9 @@ void ping_check(int fd, char *twitch_chat){
             perror("send()");
             exit(1);
         }
+        #ifdef DEBUG
+            puts("Sent Ping!");
+        #endif
     }
 }
 /* Command check function */
