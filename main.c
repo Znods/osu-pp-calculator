@@ -18,16 +18,16 @@ Will add custom Acc and Combo values in the near future
 
 */
 
-#define VERSION "1.3.1"
+#define VERSION "1.3.2"
 
 #define CHANNEL "znods"
 #define BOTNAME "znodss"
-#define OAUTH_KEY "your oauth key"
+#define OAUTH_KEY "your twitch oauth key"
 
-/* Get key from here: https://chatterino.com/client_login */
+/* Get oauth key from here: https://chatterino.com/client_login */
 
-const int client_id = 1337;
-const char *client_secret = "your client secret";
+const int client_id = 1337; // your osu client id
+const char *client_secret = "your osu client secret";
 
 /*  Find client id and client secret from your osu settings page!!!!!
                 https://osu.ppy.sh/home/account/edit                    */
@@ -45,14 +45,21 @@ int main(){
     bool running = true;
     int fd = 0;
 
-    /* Connect to twitch chat */
     #ifdef DEBUG
         write(1, "\033[0;35mSetting up socket...\n\033[0m", 33);
     #endif
+
+    /* Setup Twitch Socket*/
     fd = twitch_socket();
+    if(fd < 0){
+        write(1, "\nERR in twitch_socket(), twitch.c\n", 35);
+        return EXIT_FAILURE;
+    }
     #ifdef DEBUG
         write(1, "\033[0;35mLogging into twitch irc...\n\033[0m", 39);
     #endif
+
+    /* Login to twitch irc server */
     int ret = twitch_login(fd, CHANNEL, BOTNAME, OAUTH_KEY);
     if(ret == 2){
         printf("\nERR: in function twitch_login(), twitch.c\n");
@@ -63,11 +70,13 @@ int main(){
         cleanup(fd, attributes, data, buffer, osutoken, twitch_chat);
         return EXIT_FAILURE;
     }
+
     #ifdef DEBUG
         printf("\n\t        \033[1;35mPP Bot started! v%s\n\033[0m\n", VERSION);
         printf("\t\033[36mirc.twitch.tv conntection established!\n");
     #endif
 
+    /* Get token from osu apiv2 */
     ret = get_token(osutoken);
     if(ret < 0){
         printf("\n\n\033[1;31mFailed grabbing osu api token!\nCheck client_id & client_secret in apiv2.c!\033[0m\n\n\n");
@@ -78,6 +87,7 @@ int main(){
         write(1, "\t\t\033[1;31mGot osu apiv2 token!\033[0\n", 35);
     #endif
 
+    /* Main Loop */
     while(running){
         memset(twitch_chat, '\0', BUFSIZE);
         read(fd, twitch_chat, BUFSIZE);
@@ -91,7 +101,11 @@ int main(){
             write(1, buffer, strlen(buffer));
         #endif
         /* Check for PING */
-        ping_check(fd, twitch_chat);
+        ret = ping_check(fd, twitch_chat);
+        if(ret < 0){
+            write(1, "\n\npingCheck() function failed in twitch.c!\n", 44);
+            running = false;
+        }
         usleep(1000);
     }
 

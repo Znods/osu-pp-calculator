@@ -27,7 +27,7 @@ int twitch_socket(){
 
     if((host = gethostbyname("irc.chat.twitch.tv")) < 0){
         perror("gethostbyname()");
-        exit(1);
+        return -1;
     }
 
     serv.sin_family = AF_INET;
@@ -37,23 +37,20 @@ int twitch_socket(){
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if(fd < 0){
         perror("socket()");
-        exit(1);
+        return -1;
     }
 
     if(connect(fd, (struct sockaddr *)&serv, (socklen_t)sizeof(serv)) < 0){
         perror("socket()");
-        exit(1);
+        return -1;
     }
 
     return fd;
 }
 /* Send oauth information to twitch irc */
 int twitch_login(int fd, char *channel, char *botname, char *oauth){
-    /* Wait */
-    char pass[strlen(oauth)];
-    char buffer[strlen(botname)];
-    char chan[strlen(channel)];
-    char response[255];
+    char pass[strlen(oauth)], buffer[strlen(botname)],
+    chan[strlen(channel)], response[255];
 
     usleep(7500);
     sprintf(pass, "PASS oauth:%s\r\n", oauth);
@@ -91,24 +88,28 @@ int twitch_login(int fd, char *channel, char *botname, char *oauth){
     #ifdef DEBUG
         write(1, response, strlen(response));
     #endif
+
     return 0;
 }
 /* Periodically check pulse */
-void ping_check(int fd, char *twitch_chat){
+int ping_check(int fd, char *twitch_chat){
     if(!strncmp(twitch_chat, "PING", 4)){
         if(send(fd, "PONG :tmi.twitch.tv\r\n", strlen("PONG :tmi.twitch.tv\r\n"), 0) < 0){
             perror("send()");
-            exit(1);
+            return -1;
         }
         #ifdef DEBUG
-            puts("Sent Ping!");
+            puts("\033[0;35mSent Ping!\033[0m");
         #endif
     }
+    return 0;
 }
 /* Command check function */
 bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, struct beatmap_data *data, char *osutoken){
     char user[50] = {'\0'}, command[5] = {'\0'}, mod[10] = {'\0'};
     int beatmap = 0, mods = 0;
+
+    memset(user, '\0', 50), memset(command, '\0', 5), memset(mod, '\0', 10);
 
     /* Parse Twitch Chat Command */
     sscanf(chat, "%s %s %d %s", user, command, &beatmap, mod);
@@ -125,6 +126,10 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
             mods = MODS_FL;
         } else if(!strncmp(mod, "+ez", 4)){
             mods = MODS_EZ;
+        } else if(!strncmp(mod, "+ht", 4)){
+            mods = MODS_HT;
+        } else if(!strncmp(mod, "+dtez", 6) || !strncmp(mod, "+ezdt", 6)){
+            mods = MODS_DT | MODS_EZ;
         } else if(!strncmp(mod, "+dthr", 6) || !strncmp(mod, "+hrdt", 6)){
             mods = MODS_DT | MODS_HR;
         } else if(!strncmp(mod, "+dthd", 6) || !strncmp(mod, "+hddt", 6)){
@@ -178,6 +183,7 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
 
         /* Write to twitch chat here */
         char response[50] = {0};
+        memset(response, '\0', 50);
         sprintf(response, "PRIVMSG #%s :PP->%.2f\r\n", channel, pp);
         send(fd, response, strlen(response), 0);
     }

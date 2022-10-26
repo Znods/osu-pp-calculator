@@ -28,7 +28,7 @@ int get_token(char *osutoken){
     serv.sin_port = htons(80);
 
     if((host = gethostbyname("osu.ppy.sh")) < 0){
-        fprintf(stderr, "gethostbyname: %s\n", strerror(errno));
+        perror("gethostbyname()\n");
         return 2;
     }
 
@@ -36,21 +36,20 @@ int get_token(char *osutoken){
     
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if(fd < 0){
-        fprintf(stderr, "socket: %s\n", strerror(errno));
+        perror("socket()\n");
         return 2;
     }
 
     if(connect(fd, (struct sockaddr *)&serv, (socklen_t)sizeof(serv)) < 0){
-        fprintf(stderr, "connect: %s\n", strerror(errno));
+        perror("connect()\n");
         close(fd);
         return 2;
     }
 
-    char request[1024] = {0};
-    char buffer[2024] = {0};
+    char request[1024] = {0}, buffer[2024] = {0};
     
-    memset(request, '\0', 1024);
-    memset(buffer, '\0', 2024);
+    memset(request, '\0', 1024), memset(buffer, '\0', 2024);
+
     sprintf(request, "POST /oauth/token HTTP/1.1\r\nHost: osu.ppy.sh\r\nAccept: application/json\r\nContent-Type: application/json\r\nContent-Length: 131\r\n\r\n{\"client_id\":%d,\"client_secret\":\"%s\",\"grant_type\":\"client_credentials\",\"scope\":\"public\"}\r\n", client_id, client_secret);
     
     if(send(fd, request, strlen(request), 0) < 0){
@@ -82,6 +81,7 @@ int get_token(char *osutoken){
     }
 
     close(fd);
+    
     return osutoken[0] == '\0' ? -1 : 0;
 }
 
