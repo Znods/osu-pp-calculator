@@ -19,6 +19,7 @@
 #define OWNER ":znods:" /* For "!s" command to close bot gracefully */
 
 float calcTotal(struct beatmap_data *, struct beatmap *, int);
+double ping_socket(char *);
 
 /* Creates socket for twitch bot */
 int twitch_socket(){
@@ -193,6 +194,24 @@ bool commands(int fd, char *chat, char *channel, struct beatmap *attributes, str
             printf("\nKilling bot...\n");
         #endif
         return false;
+    }
+
+    if(!strncmp("!ms", command, 4)){
+        double twitch_ms = ping_socket("irc.chat.twitch.tv");
+        if((int)twitch_ms < 0){
+            printf("irc.chat.twitch.tv has timed out!\n");
+            return false;
+        }
+        double osu_ms = ping_socket("osu.ppy.sh");
+        if((int)osu_ms < 0){
+            printf("osu.ppy.sh has timed out!\n");
+            return false;
+        }
+
+        char pres[255];
+        memset(pres, '\0', 255);
+        sprintf(pres, "PRIVMSG #%s :| ttv irc-> %.2fms || osu api-> %.2fms |\r\n", channel, twitch_ms, osu_ms);
+        send(fd, pres, strlen(pres), 0);
     }
     return true;
 }
